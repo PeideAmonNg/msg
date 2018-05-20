@@ -16,8 +16,10 @@ app.config.update(dict(
 ))
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 
-sqliteAdminBP = sqliteAdminBlueprint(dbPath = app.config['DATABASE'])
-app.register_blueprint(sqliteAdminBP, url_prefix='/sqlite') 
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+
+# sqliteAdminBP = sqliteAdminBlueprint(dbPath = app.config['DATABASE'])
+# app.register_blueprint(sqliteAdminBP, url_prefix='/sqlite') 
 
 def connect_db():
     """Connects to the specific database."""

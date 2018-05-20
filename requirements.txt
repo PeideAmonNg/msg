@@ -1,0 +1,5 @@
+flask
+flask_socketio
+werkzeug.security
+flask_sqlite_admin.core
+gunicorn
