@@ -1,0 +1,406 @@
+{% extends "layout.html" %}
+{% block body %}
+{# <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script> #}
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.10/css/all.css" integrity="sha384-+d0P83n9kaQMCwj8F4RJB66tzIwOKmrdb46+porD/OvrJ+37WqIM7UoBtwHO6Nlg" crossorigin="anonymous">
+
+<script type="text/javascript" src="{{url_for('static', filename='bootstrap-tagsinput-latest/dist/bootstrap-tagsinput.js')}}"></script>
+<link rel=stylesheet type=text/css href="{{url_for('static', filename='bootstrap-tagsinput-latest/dist/bootstrap-tagsinput.css')}}"></link>
+
+<script type="text/javascript" src="//twitter.github.io/typeahead.js/releases/latest/bloodhound.js"></script>
+
+
+<div id="addMemberModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="addMemberModalLabel">Add members to conversation</h3>
+  </div>
+  <div class="modal-body" style="height: 10em;">
+    <input type="text" id="username_search" data-role="tagsinput" placeholder="Username"/>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+    <button class="btn btn-primary" id="addMember">Add</button>
+  </div>
+</div>
+
+<div id="deleteConversationModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="deleteConversationModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="deleteConversationModalLabel">Delete conversation</h3>
+  </div>
+  <div class="modal-body" style="height: 10em;">
+        Are you sure? 
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+    <button class="btn btn-danger" id="deleteConversation">Delete</button>
+  </div>
+</div>
+
+<div id="editMessageModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="editMessageModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="editMessageModalLabel">Edit Message</h3>
+  </div>
+  <div class="modal-body" style="height: 10em;">
+    <textarea id=editMessageTextArea name=text rows=3 style="width:95%"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+    <button class="btn" id="editMessage">Confirm</button>
+  </div>
+</div>
+
+<div id="deleteMessageModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="deleteMessageModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="deleteMessageModalLabel">Delete Message</h3>
+  </div>
+  <div class="modal-body" style="height: 10em;">
+        Are you sure? 
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+    <button class="btn btn-danger" id="deleteMessage">Delete</button>
+  </div>
+</div>
+
+  <div style="margin-bottom: 10px">
+    <span style="font-size: large; font-weight: bold;">To </span><span style="color: grey;" id="members">{{members}}</span>
+    <div class="dropdown" style="float:right;">
+      <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+        <i class="fas fa-bars"></i>
+      </a>
+      <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+        <li><a data-toggle="modal" href="#addMemberModal">Add members</a></li>  
+        <li><a data-toggle="modal" href="#deleteConversationModal">Delete conversation</a></li>
+      </ul>
+    </div>
+  </div>
+  <div id=messages style="margin-top: 20px;">
+    {% for msg in messages %}
+        <div id= msgContainer-{{msg.id}} style="margin-bottom: 10px; width: 17em;" class={{'me' if msg.sender_id == session.user_id else "other"}}>
+          <pre class="pre" id="msg-{{msg.id}}">{{msg.text}}</pre>
+          <span class=date><span class={{'my_username' if msg.sender_id == session.user_id}}>{{'me' if msg.sender_id == session.user_id else msg.username}}</span> at {{format_date(msg.created_at)}}
+          {% if msg.username == session.username %}
+            <div style="display: inline-block;"> 
+              <div class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                  <i class="fas fa-bars"></i>
+                </a>
+                <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+                  <li><a id='{{msg.id}}' class="editMessageLink" data-toggle="modal" href="#editMessageModal">edit</a></li>  
+                  <li><a id='{{msg.id}}' class="deleteMessageLink" data-toggle="modal" href="#deleteMessageModal">delete</a></li>
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+          </span>
+        </div>
+    {% endfor %}
+  </div>
+
+<form action="{{ url_for('new_message_api') }}" method=post class=add-entry>
+  <textarea id=text name=text rows=3></textarea>
+  <input id=send type=submit value=Send>
+</form>
+
+<script type="text/javascript" charset="utf-8">
+    {# var socket = io.connect('localhost:5000'); #}
+    var socket = io();
+    var user;
+
+    socket.on('message', function(data) {
+      console.log(data);
+      console.log("message event");
+    });
+
+    socket.on('updatedMembers', function(data) {
+      console.log(data.updatedMembers);
+      console.log("updatedMembers event");
+      updateMembers(data.updatedMembers);
+    });
+
+    socket.on('new_message', function(data) {
+      console.log('new_message event');
+      console.log(data);
+      console.log(user);
+      if(data.sender != user.username){
+        console.log("data.sender != user.username");
+        addToConversation(data.message, data.time, data.sender);
+        audio.play();
+      }
+    });
+
+    socket.on('edited_message', function(data) {
+      console.log('edited_message event');
+      console.log(data);
+      $("#msg-" + data.message_id).html(data.message);
+    });    
+
+    socket.on('user_info', function(data) {
+      console.log('user_info');
+      console.log(data);
+      user = data;
+    });   
+
+    socket.on('json', function(data) {
+      console.log(data);
+      console.log("json event");
+    });
+
+    socket.on('connect', function(data) {
+      console.log("on connect");
+      console.log(data);
+      console.log(getConversationId());
+      socket.emit('join', {room: getConversationId()});
+    }); 
+
+    socket.on('room', function(data) {
+      console.log(data);
+    });
+
+
+    function addToConversation(msg, date, sender){      
+    console.log(msg);
+        sender = sender == user.username ? 'me' : sender;
+        var usernameClass = sender == 'me' ? 'my_username': '';
+    
+        var msgEntry = `<div  style="margin-bottom: 10px; width: 17em;" class=${( sender == 'me' ? 'me' : 'other') }>
+          <pre class="pre" id="msg-${msg.id}">${msg.msg}</pre>
+          <span class=date><span class=${usernameClass}>${sender}</span> at ${date} `;
+
+
+        console.log(user.username);
+        console.log(sender);
+        if(sender == 'me'){
+          msgEntry += `<div style="display: inline-block;"> 
+            <div class="dropdown">
+              <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                <i class="fas fa-bars"></i>
+              </a>
+              <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+                <li><a id='${msg.id}' class="editMessageLink" data-toggle="modal" href="#editMessageModal">edit</a></li>  
+                <li><a data-toggle="modal" href="#deleteMessageModal">delete</a></li>
+              </ul>
+            </div>
+          </div>`;
+        }
+
+        msgEntry += `</span>
+        </div>`;
+
+
+        $("#messages").append(msgEntry);
+        scrollToBottom();
+    }
+
+    <!-- When user presses enter in message box -->
+    $('#text').keydown(function (event) {      
+      var keypressed = event.keyCode || event.which;
+      if (keypressed == 13 && !event.shiftKey) {
+          $("#send").click();
+      }
+    });
+
+    var scrollToBottom = function(){
+      $("#messages").scrollTop($("#messages")[0].scrollHeight);
+    }
+
+    var getConversationId = function(){
+      return parseInt(window.location.pathname.split("/")[2]);
+    }
+
+
+    $( "#send" ).click(function( event ) {
+      event.preventDefault();  
+      var conversation_id = getConversationId();
+      if(conversation_id){
+        console.log("conversation_id is " + conversation_id);
+        var msg = $("#text").val();
+
+        console.log("msg is " + msg);
+
+        $.post( "{{url_for('new_message_api')}}", { c_id: conversation_id, msg: msg})
+        .done(function( data ) {
+          console.log(data);
+          var msgObj = {msg: msg, id: data.msg_id};
+          addToConversation(msgObj, data.time, 'me');
+          $("#text").val("");
+          socket.emit('new_message', {room: getConversationId(), message: msgObj, time: data.time, sender: data.sender })
+        });    
+      }else{
+        alert("refresh page");
+      }      
+    });
+
+    scrollToBottom();
+
+  $('input[type="text"]').tagsinput({
+    typeahead: {
+      source: function(query) {
+        return $.get('{{url_for("username")}}?q=' + query);
+      }
+    }
+  });
+
+  $('#deleteConversation').click(function(e){
+    console.log("deleteConversationModal");
+    console.log(this);
+    console.log(e);
+    $('#deleteConversationModal').modal('hide')
+    
+    $.ajax({
+      url: '{{url_for("delete_conversation", id=entry.id)}}',
+      type: 'DELETE',
+      success: function(res) {
+          // Do something with the result
+          console.log("delete response from server");
+          console.log(res);
+          if(res.result == 'deleted'){
+            window.location.href = "{{url_for('get_messages', q='deleted')}}"; 
+        }
+      }
+    });
+
+    return true; 
+  });
+
+  var updateMembers = function(originalMembers){
+
+    var i = originalMembers.indexOf(user.username);
+    var temp = originalMembers[0];
+    originalMembers[0] = originalMembers[i];
+    originalMembers[i] = temp;
+
+    $("#members").text(originalMembers.splice(1).join(" & "));
+  }
+
+  $('#addMember').click(function(e){
+    console.log('#addMember');
+    $('#addMemberModal').modal('hide')
+    var members = [];
+    $('.bootstrap-tagsinput').first().find(" > span").each(function(index){
+        console.log($(this).text());
+        members.push($(this).text());
+    });
+
+    var removedMembers = [];
+    var newMembers = [];
+
+    members.forEach(function(member){
+      if(!originalMembers.includes(member)){
+        newMembers.push(member);
+      }
+    });
+
+    originalMembers.forEach(function(member){
+      if(!members.includes(member)){
+        removedMembers.push(member);
+      }
+    });
+
+    $.post( "{{url_for('api_update_conversation_members', id=entry.id)}}", { newMembers: newMembers, removedMembers: removedMembers})
+    .done(function( data ) {
+      console.log(data);
+      $("#members").text(data.members);
+      if(data.url_redirect){
+        window.location.href= data.url_redirect;
+      } else{
+        originalMembers = data.updatedMembers;
+        updateMembers(originalMembers);
+      }
+    });   
+
+    return false;
+  });
+
+  var currentMsgId;
+
+  $( "#messages" ).on('click', '.editMessageLink', function(){
+    console.log("#editMessageModal");
+    console.log(this);
+    console.log(this.id);
+    console.log($('#msg-'+this.id).html())
+    $('#editMessageTextArea').val($('#msg-'+this.id).html());
+
+    currentMsgId = this.id;
+  }); 
+
+  $("#editMessage").click(function(){
+    console.log("#editMessage");
+    $('#editMessageModal').modal('hide')
+
+    console.log("currentMsg is " + currentMsgId);
+    var newText = $('#editMessageTextArea').val();
+    $.post( `/api/message/${currentMsgId}`, { text: newText})
+    .done(function( data ) {
+      if(data.status == 'success'){
+        $("#msg-" + currentMsgId).html(newText);
+        socket.emit('edited_message', {room: getConversationId(), message: newText, message_id: currentMsgId })
+
+      }
+      console.log(data);
+    });   
+
+    return false;
+  });
+
+  var selectedMsgToDelete;
+
+  $( "#messages" ).on('click', '.deleteMessageLink', function(){
+    console.log("#deleteMessageModal");
+    console.log(this);
+    console.log(this.id);
+    selectedMsgToDelete = this.id;
+    console.log("selectedMsgToDelete is " + selectedMsgToDelete);
+  }); 
+
+  $('#deleteMessage').click(function(e){
+      console.log("deleteMessage");
+      console.log(this);
+      console.log(e);
+      $('#deleteMessageModal').modal('hide')
+      
+      $.ajax({
+        url: `/api/message/${selectedMsgToDelete}`,
+        type: 'DELETE',
+        success: function(res) {
+          // Do something with the result
+          console.log("delete response from server");
+          console.log(res);
+          if(res.result == 'deleted'){
+            $(`#msgContainer-${selectedMsgToDelete}`).remove();
+          }
+        }
+      });
+
+      return true; 
+    });
+  
+var originalMembers;
+
+$.get("{{url_for('api_get_members', id=entry.id)}}", function(users){
+  console.log('got data');
+  console.log(users);
+
+  originalMembers = users;
+
+  users.forEach(function(user){
+    $('#username_search').tagsinput('add', user);
+  });
+});
+
+var audio;
+$( document ).ready(function() {
+  // Handler for .ready() called.
+  audio = new Audio("{{url_for('static', filename='stairs.ogg')}}");
+  audio.volume = 0.1;
+});
+
+
+
+</script>
+
+{% endblock %}

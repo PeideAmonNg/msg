@@ -1,0 +1,136 @@
+{% extends "layout.html" %}
+{% block body %}
+{# <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script> #}
+{# <script type="text/javascript" src="{{url_for('static', filename='js/jQuery.tagify.js')}}"></script> #}
+
+<!-- <link rel=stylesheet type=text/css href="{{url_for('static', filename='bootstrap-tagsinput-latest/dist/bootstrap-tagsinput.css')}}"></link>
+<script type="text/javascript" src="{{url_for('static', filename='bootstrap-tagsinput-latest/dist/bootstrap-tagsinput.js')}}"></script> -->
+
+<div id=entries>
+  <span style="font-size: large; font-weight: bold;">To </span><input data-role="tagsinput" id='search' type="text" placeholder="Add member"/>
+  <div id=messages style="margin-top: 20px;">
+    {% for msg in messages %}
+      <div>
+        <div class={{'me' if msg.sender_id == session.user_id else "other"}}>
+          <pre>{{msg.text}}</pre>
+          <span class=date><span class={{'my_username' if msg.sender_id == session.user_id}}>{{'me' if msg.sender_id == session.user_id else msg.username}}</span> at {{format_date(msg.created_at)}}</span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if session.logged_in %}
+  <form action="{{ url_for('new_message') }}" method=post class=add-entry id=add-entry>
+    <textarea id=text name=text rows=3 placeholder="Message"></textarea>
+    <input id=send type=submit value=Send>
+  </form>
+{% endif %}   
+
+<script type="text/javascript" charset="utf-8">
+  var socket = io.connect('localhost:5000');
+  var user;
+
+  socket.on('connect', function() {
+    socket.emit('conn', {data: 'new page'});
+  }); 
+
+  socket.on('username_search_response', function(data) {
+    console.log(data);
+    $('#entries').prepend(`<li><h2>${data.title}</h2>${data.text}</li>`)
+  });
+
+  socket.on('user_info', function(data) {
+    console.log('user_info');
+    console.log(data);
+    user = data;
+  }); 
+
+  var scrollToBottom = function(){
+    $("#messages").scrollTop($("#messages")[0].scrollHeight);
+  } 
+
+  $("#text").on("keyup", function(){
+    var val = $("#text").val();
+    console.log("Text changed: " + val);
+    if(val){
+      socket.emit("username_search", {username: $("#text").val()});
+    }
+  });
+
+  $('#search').tagsinput({
+    typeahead: {               
+      source: function(query) {
+        return $.get("{{url_for('username')}}"+"?q=" + query);
+      }
+    }
+  });
+
+$(".add-entry").first().submit( function(eventObj) {
+      var container = $("<div id='recipients'>");
+      console.log("in add-entry");
+      $('.bootstrap-tagsinput').first().find(" > span").each(function(index){
+        $('<input />').attr('type', 'hidden')
+          .attr('value', $(this).text())
+          .attr('name', 'user')
+          .appendTo(container);
+      }); 
+
+      container.appendTo("#add-entry");
+
+      console.log($("#add-entry"));
+      
+      return true;
+  });
+
+  function addToConversation(msg, date, sender){      
+    sender = sender == user.username ? 'me' : sender;
+    var usernameClass = sender == 'me' ? 'class=my_username': '';
+    var msgEntry = '<div style="margin-bottom: 10px; width: 17em;" class=' + ( sender == 'me' ? 'me' : 'other') +"><pre class=pre>" + msg + "</pre><span class=date><span " + usernameClass + ">" + sender + "</span> at " + 
+    date + "</span></div>";
+    $("#messages").append(msgEntry);
+    scrollToBottom();
+  }
+
+  var currentConversationId;
+
+  $(this).on("itemAdded", function(){
+
+    console.log("itemAdded");
+    updateMessages();
+  });
+
+  $("#search").on("itemRemoved", function(){
+    console.log("itemRemoved"); 
+    updateMessages();   
+  });
+
+  function updateMessages(){
+    var members = [];
+    $('.bootstrap-tagsinput').first().find(" > span").each(function(index){
+        console.log($(this).text());
+        members.push($(this).text());
+    });
+    console.log(members);
+
+    $.post( "{{url_for('api_get_conversation_by_members')}}", { members: members})
+    .done(function( res ) {
+      console.log(res);
+      if(res.conversation_id){
+        $("#messages").empty();
+        currentConversationId = res.conversation_id;
+        for(var i in res.messages){
+          var m = res.messages[i];
+          addToConversation(m.message, m.time, m.sender);
+        }
+      }else{
+        currentConversationId = undefined;
+        console.log("no messages for the given users");
+        $("#messages").empty();
+      }
+    });  
+  }
+</script>
+
+{% endblock %}
+

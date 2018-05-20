@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<title>msg</title>
+
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+       <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/3.3.5/css/bootstrap.min.css">  -->
+     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/3.3.5/css/bootstrap-theme.min.css">  -->
+
+<!-- 
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap-theme.min.css"> -->
+    <!-- <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"> -->
+    <!-- // <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script> -->
+    <!-- // <script src="//cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script> -->
+    
+<script type="text/javascript" src="//maxcdn.bootstrapcdn.com/bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap.min.css">
+
+
+
+    <script type="text/javascript" src="{{url_for('static', filename='bootstrap3-typeahead.min.js')}}"></script>
+
+     <!-- <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script> -->
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='bootstrap-tagsinput-latest/dist/bootstrap-tagsinput.css') }}">
+
+<script type="text/javascript" src="{{url_for('static', filename='bootstrap-tagsinput-latest/dist/bootstrap-tagsinput.js')}}"></script>
+    <!-- // <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script> -->
+    
+
+    <!-- <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/rainbow/1.2.0/themes/github.css"> -->
+    <script src="//cdnjs.cloudflare.com/ajax/libs/rainbow/1.2.0/js/rainbow.min.js"></script>
+
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> -->
+<!-- <script src="{{url_for('static', filename='jquery.min_2.1.4.js')}}"></script> -->
+<!-- <script type="text/javascript" src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script> -->
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.3.1/dist/semantic.min.css"> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.3.1/dist/semantic.min.js"></script> -->
+
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js"></script>
+
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<!-- <script type="text/javascript" src="//maxcdn.bootstrapcdn.com/bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap.min.css"> -->
+
+
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+
+<body>
+<div class=page>
+  <div class=metanav>
+    <a style="float: left; font-weight: bold; font-size: x-large;" href="{{url_for('home')}}">msg</a>
+  {% if not session.logged_in %}
+    <a href="{{ url_for('login') }}">log in</a>
+    
+
+    <a href="{{ url_for('register') }}">register</a>
+  {% else %}
+    {{session.username}}
+    <a href="{{ url_for('get_messages') }}">messages</a>
+    <a href="{{ url_for('new_message') }}">new msg</a>
+    <a href="{{ url_for('logout') }}">log out</a>
+  {% endif %}
+  </div>
+  {% for message in get_flashed_messages() %}
+    <div class=flash>{{ message }}</div>
+  {% endfor %}
+
+  {% block body %}{% endblock %}
+</div>
+</body>
+</html>

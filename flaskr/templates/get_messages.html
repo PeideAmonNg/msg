@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block body %}
+<!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script> -->
+<script type="text/javascript" charset="utf-8">
+    var socket = io.connect('localhost:5000');
+    socket.on('connect', function() {
+      socket.emit('conn', {data: 'new page'});
+    }); 
+
+    socket.on('my event', function(data) {
+      console.log(data);
+      $('#entries').prepend(`<li><h2>${data.title}</h2>${data.text}</li>`)
+    });
+
+</script>
+  
+  <h3>Messages</h3>
+
+  <ul id=entries>
+  {% for entry in entries %}
+    <a href="{{ url_for('get_conversation',id=entry.id) }}"><div style="margin: 10px 0"><i>{{ "me" if user['user_id'] == entry.latest_member_id else latest_member_username[entry.id] }}: {{entry.latest_message}}</i><br><span style="background-color: lightgrey;">{{members[entry.id]}}</span><br><span class=date>last msg at {{format_date(entry.updated_at)}}</span></div></a>
+      <!-- recipient_id: {{entry.recipient_id}} -->
+  {% else %}
+    no messages
+  {% endfor %}
+  </ul>
+{% endblock %}

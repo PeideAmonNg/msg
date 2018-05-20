@@ -1,0 +1,3 @@
+.eggs
+.pytest_cache
+flaskr.egg-info
