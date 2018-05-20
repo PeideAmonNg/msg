@@ -9,7 +9,7 @@ app.config.from_object(__name__) # load config from this file , flaskr.py
 
 # Load default config and override config from an environment variable
 app.config.update(dict(
-    # DATABASE=os.path.join(app.root_path, 'flaskr.db'),
+    DATABASE=os.path.join(app.root_path, 'flaskr.db'),
     SECRET_KEY='development key',
     USERNAME='admin',
     PASSWORD='default',
@@ -18,10 +18,10 @@ app.config.update(dict(
 ))
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 
-# sqliteAdminBP = sqliteAdminBlueprint(dbPath = app.config['DATABASE'])
-# app.register_blueprint(sqliteAdminBP, url_prefix='/sqlite') 
+sqliteAdminBP = sqliteAdminBlueprint(dbPath = app.config['DATABASE'])
+app.register_blueprint(sqliteAdminBP, url_prefix='/sqlite') 
 
 def connect_db():
     """Connects to the specific database."""
