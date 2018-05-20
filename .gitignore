@@ -1,3 +1,4 @@
 .eggs
 .pytest_cache
 flaskr.egg-info
+flaskr/flaskr.db
